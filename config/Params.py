@@ -1,0 +1,73 @@
+import argparse
+
+
+parser = argparse.ArgumentParser(description='Pipeline for running the project',
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+#各类超参数设置
+parser.add_argument('--dataset',type=str,default='SPARCS',choices=['SPARCS','LevirCS','WHU','WFV'])
+parser.add_argument('--model',type=str,default='CAN',choices=['CAN','Boundary','deeplabv3','RS'])
+parser.add_argument('--optimizer',type=str,default='Adam',choices=['Adam','Sgd'])
+parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'])
+parser.add_argument('--num_classes', type=int, default=2, help='最终有多少分类')
+parser.add_argument('--epochs', type=int, default=200, help='训练轮数')
+parser.add_argument('--batch_size', type=int, default=4,help='训练批次')
+parser.add_argument('--lr', type=float, default=1e-05, help='初始学习率')
+parser.add_argument('--lr_decay_type',type=str,default='cos',help='学习率调整方式')
+parser.add_argument('--split_window', type=int, default=384, help='滑动窗口')
+parser.add_argument('--patch_size', type=int, default=384, help='预测之后保留的图像规格')
+parser.add_argument('--overlapping_size', type=int, default=0, help='重叠像素规格')
+parser.add_argument('--bands_list', type=list, default=[1,2,3,4], help='选择波段')
+parser.add_argument('--cls_list', type=list, default=['clear','cloud'], help='类别名')
+parser.add_argument('--is_resume_train', type=bool, default=False, help='断点训练')
+parser.add_argument('--num_works', type=int, default=4, help='核心数')
+parser.add_argument('--save_interval_epoch',type=int,default=20,help='保存间隔')
+parser.add_argument('--threshold',type=float,default=0.2,help='二分类阈值')
+parser.add_argument('--distributed', type=bool, default=True)
+parser.add_argument('--sync_bn',type=bool,default=True)
+parser.add_argument('--local_rank',type=int,default=0)
+parser.add_argument('--fp16',type=bool,default=False)
+#路径设置
+parser.add_argument('--checkpoint_path', type=str, default='./save_models/BASE_LS_4c_CAN_SPARCS_epoch_120', help='断点权重')
+parser.add_argument('--model_dir', type=str, default='./save_models/', help='权重保存路径')
+parser.add_argument('--data_dir', type=str, default='./data/raw/', help='原数据集路径')
+parser.add_argument('--data_crop_dir', type=str, default='./data/val/', help='切割数据集路径')
+parser.add_argument('--train_dir', type=str, default='./data/val/train/', help='训练集路径')
+parser.add_argument('--test_dir', type=str, default='./data/val/test/', help='测试集路径')
+parser.add_argument('--val_dir', type=str, default='./data/val/val/', help='验证集路径')
+parser.add_argument('--predict_dir', type=str, default='./result_img/predict_img/', help='分类结果保存路径')
+parser.add_argument('--fusion_dir', type=str, default='./result_img/fusion_img/', help='图像融合恢复路径')
+parser.add_argument('--log_dir', type=str, default='./log/', help='loss保存路径')
+#LevirCS_data路径设置
+parser.add_argument('--data_dir_L', type=str, default='./data/LevirCS/raw/', help='SPARCS原数据集路径')
+parser.add_argument('--data_crop_dir_L', type=str, default='./data/LevirCS/crop/', help='切割数据集路径')
+parser.add_argument('--train_dir_L', type=str, default='./data/LevirCS/raw/train/', help='训练集路径')
+parser.add_argument('--test_dir_L', type=str, default='./data/LevirCS/raw/test/', help='测试集路径')
+parser.add_argument('--val_dir_L', type=str, default='./data/LevirCS/raw/val/', help='验证集路径')
+#SPARCS_data路径设置
+parser.add_argument('--data_dir_S', type=str, default='./data/SPARCS/', help='SPARCS原数据集路径')
+parser.add_argument('--data_crop_dir_S', type=str, default='./data/SPARCS/SPARCS_Crop/', help='切割数据集路径')
+parser.add_argument('--train_dir_S', type=str, default='./data/SPARCS/SPARCS_Crop/train/', help='训练集路径')
+parser.add_argument('--test_dir_S', type=str, default='./data/SPARCS/SPARCS_Crop/test/', help='测试集路径')
+parser.add_argument('--val_dir_S', type=str, default='./data/SPARCS/SPARCS_Crop/val/', help='验证集路径')
+#WHU_data路径设置
+parser.add_argument('--data_dir_WHU', type=str, default='./data/WHU_30m/raw/', help='WHU原数据集路径')
+parser.add_argument('--data_crop_dir_WHU', type=str, default='./data/WHU_30m/WHU_Crop/', help='切割数据集路径')
+parser.add_argument('--train_dir_WHU', type=str, default='./data/WHU_30m/WHU_Crop/train/', help='训练集路径')
+parser.add_argument('--test_dir_WHU', type=str, default='./data/WHU_30m/WHU_Crop/test/', help='测试集路径')
+parser.add_argument('--val_dir_WHU', type=str, default='./data/WHU_30m/WHU_Crop/val/', help='验证集集路径')
+
+#WFV_data路径设置
+parser.add_argument('--data_dir_WFV', type=str, default='./data/WFV/raw/', help='WHU原数据集路径')
+parser.add_argument('--data_crop_dir_WFV', type=str, default='./data/WFV/crop/', help='切割数据集路径')
+parser.add_argument('--train_dir_WFV', type=str, default='./data/WFV/crop/train/', help='训练集路径')
+parser.add_argument('--test_dir_WFV', type=str, default='./data/WFV/crop/test/', help='测试集路径')
+parser.add_argument('--val_dir_WFV', type=str, default='../data/WFV/crop/val/', help='验证集集路径')
+
+#整体流程
+parser.add_argument('--train',type=str,default='train',choices=['train','test','val'],help='是否训练')
+parser.add_argument('--train_test_split',type=bool,default=False,help='划分数据集')
+parser.add_argument('--cut_img',type=bool,default=False,help='训练前分割图像')
+parser.add_argument('--train_model',type=int,default=1,help='训练或测试或其它,用于数据集')
+parser.add_argument('--fusion_img',type=bool,default=False,help='是否融合图像')
+parser.add_argument('--evalution',type=bool,default=False,help='是否评估')
+parser.add_argument('--xiaorong',type=bool,default=True,help='是否评估')
